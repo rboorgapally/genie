@@ -191,9 +191,25 @@ public class JobClient {
      * @throws IOException          For Network and other IO issues.
      */
     public List<JobSearchResult> getJobs() throws IOException, GenieClientException {
-        return this.getJobs(null, null, null, null, null, null,
-            null, null, null, null, null, null,
-            null, null, null, null, null);
+        return this.getJobs(null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     }
 
     /**
@@ -234,7 +250,9 @@ public class JobClient {
      * String,
      * String,
      * Integer,
-     * Integer
+     * Integer,
+     * String,
+     * String
      *)
      */
     @Deprecated
@@ -270,6 +288,8 @@ public class JobClient {
             null,
             null,
             null,
+            null,
+            null,
             null
         );
     }
@@ -292,8 +312,72 @@ public class JobClient {
      * @param maxFinished      The time which the job had to finish before in order to be returned (exclusive)
      * @param grouping         The grouping the job should be a member of
      * @param groupingInstance The grouping instance the job should be a member of
-     * @param page             The page offset of the search results
-     * @param size             The number of search results per page
+     * @return A list of jobs.
+     * @throws GenieClientException If the response received is not 2xx.
+     * @throws IOException          For Network and other IO issues.
+     */
+    public List<JobSearchResult> getJobs(
+        @Nullable final String id,
+        @Nullable final String name,
+        @Nullable final String user,
+        @Nullable final Set<String> statuses,
+        @Nullable final Set<String> tags,
+        @Nullable final String clusterName,
+        @Nullable final String clusterId,
+        @Nullable final String commandName,
+        @Nullable final String commandId,
+        @Nullable final Long minStarted,
+        @Nullable final Long maxStarted,
+        @Nullable final Long minFinished,
+        @Nullable final Long maxFinished,
+        @Nullable final String grouping,
+        @Nullable final String groupingInstance
+    ) throws IOException, GenieClientException {
+        return this.getJobs(
+            id,
+            name,
+            user,
+            statuses,
+            tags,
+            clusterName,
+            clusterId,
+            commandName,
+            commandId,
+            minStarted,
+            maxStarted,
+            minFinished,
+            maxFinished,
+            grouping,
+            groupingInstance,
+            null,
+            null,
+            null,
+            null
+        );
+    }
+
+    /**
+     * Method to get a list of all the jobs from Genie for the query parameters specified.
+     *
+     * @param id               id for job
+     * @param name             name of job (can be a SQL-style pattern such as HIVE%)
+     * @param user             user who submitted job
+     * @param statuses         statuses of jobs to find
+     * @param tags             tags for the job
+     * @param clusterName      the name of the cluster
+     * @param clusterId        the id of the cluster
+     * @param commandName      the name of the command run by the job
+     * @param commandId        the id of the command run by the job
+     * @param minStarted       The time which the job had to start after in order to be return (inclusive)
+     * @param maxStarted       The time which the job had to start before in order to be returned (exclusive)
+     * @param minFinished      The time which the job had to finish after in order to be return (inclusive)
+     * @param maxFinished      The time which the job had to finish before in order to be returned (exclusive)
+     * @param grouping         The grouping the job should be a member of
+     * @param groupingInstance The grouping instance the job should be a member of
+     * @param page             The page offset of the search results, defaults to 0 if not specified
+     * @param size             The number of search results per page, defaults to 10 if not specified
+     * @param sort             The field to sort the search results on, defaults to created if not specified
+     * @param direction        The direction of the sorting (ASC or DESC), defaults to DESC if not specified
      * @return A list of jobs.
      * @throws GenieClientException If the response received is not 2xx.
      * @throws IOException          For Network and other IO issues.
@@ -316,7 +400,9 @@ public class JobClient {
         @Nullable final String grouping,
         @Nullable final String groupingInstance,
         @Nullable final Integer page,
-        @Nullable final Integer size
+        @Nullable final Integer size,
+        @Nullable final String sort,
+        @Nullable final String direction
     ) throws IOException, GenieClientException {
         return GenieClientUtils.parseSearchResultsResponse(
             this.jobService.getJobs(
@@ -336,7 +422,9 @@ public class JobClient {
                 grouping,
                 groupingInstance,
                 page,
-                size
+                size,
+                sort,
+                direction
             ).execute(),
             "jobSearchResultList",
             JobSearchResult.class
