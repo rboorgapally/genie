@@ -126,58 +126,6 @@ abstract class JobClientIntegrationTest extends ClusterClientIntegrationTest {
             .assertThat(IOUtils.toString(
                 this.jobClient.getJobOutputFile(echoJobId, null), StandardCharsets.UTF_8))
             .isNotBlank();
-
-        // Some quick find jobs calls
-        Assertions
-            .assertThat(this.jobClient.getJobs())
-            .extracting(JobSearchResult::getId)
-            .containsExactlyInAnyOrder(sleepJobId, killJobId, timeoutJobId, dateJobId, echoJobId);
-        Assertions
-            .assertThat(
-                this.jobClient.getJobs(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    echoCommandId,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-                )
-            )
-            .extracting(JobSearchResult::getId)
-            .containsExactlyInAnyOrder(echoJobId);
-        Assertions
-            .assertThat(
-                this.jobClient.getJobs(
-                    null,
-                    null,
-                    null,
-                    Sets.newHashSet(JobStatus.KILLED.name()),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-                )
-            )
-            .extracting(JobSearchResult::getId)
-            .containsExactlyInAnyOrder(killJobId, timeoutJobId);
     }
 
     protected void createJobs() throws Exception {
