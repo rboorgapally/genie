@@ -53,95 +53,26 @@ abstract class JobClientIntegrationTest extends ClusterClientIntegrationTest {
     private static final String SLEEP_TAG = "type:sleep";
     private static final String DUMMY_TAG = "type:dummy";
 
+    protected String dummyClusterId;
+    protected String sleepCommandId;
+    protected String dateCommandId;
+    protected String echoCommandId;
+
+    protected JobRequest sleepJob;
+    protected JobRequest killJob;
+    protected JobRequest timeoutJob;
+    protected JobRequest dateJob;
+    protected JobRequest echoJob;
+
+    protected String sleepJobId;
+    protected String killJobId;
+    protected String timeoutJobId;
+    protected String dateJobId;
+    protected String echoJobId;
+
     @Test
     void canSubmitJob() throws Exception {
-        final String dummyClusterId = this.createDummyCluster();
-        final String sleepCommandId = this.createSleepCommand();
-        final String dateCommandId = this.createDateCommand();
-        final String echoCommandId = this.createEchoCommand();
-
-        final List<ClusterCriteria> clusterCriteriaList = Lists.newArrayList(
-            new ClusterCriteria(Sets.newHashSet(DUMMY_TAG))
-        );
-
-        final JobRequest sleepJob = new JobRequest.Builder(
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            clusterCriteriaList,
-            Sets.newHashSet(SLEEP_TAG)
-        )
-            .withCommandArgs(Lists.newArrayList("1"))
-            .withDisableLogArchival(true)
-            .build();
-
-        final JobRequest killJob = new JobRequest.Builder(
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            clusterCriteriaList,
-            Sets.newHashSet(SLEEP_TAG)
-        )
-            .withCommandArgs(Lists.newArrayList("60"))
-            .withDisableLogArchival(true)
-            .build();
-
-        final JobRequest timeoutJob = new JobRequest.Builder(
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            clusterCriteriaList,
-            Sets.newHashSet(SLEEP_TAG)
-        )
-            .withCommandArgs(Lists.newArrayList("60"))
-            .withTimeout(1)
-            .withDisableLogArchival(true)
-            .build();
-
-        final JobRequest dateJob = new JobRequest.Builder(
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            clusterCriteriaList,
-            Sets.newHashSet(DATE_TAG)
-        )
-            .withDisableLogArchival(true)
-            .build();
-
-        final JobRequest echoJob = new JobRequest.Builder(
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            clusterCriteriaList,
-            Sets.newHashSet(ECHO_TAG)
-        )
-            .withCommandArgs(Lists.newArrayList("hello"))
-            .withDisableLogArchival(true)
-            .build();
-
-        final String sleepJobId;
-        final byte[] attachmentBytes = UUID.randomUUID().toString().getBytes(StandardCharsets.UTF_8);
-        try (ByteArrayInputStream bis = new ByteArrayInputStream(attachmentBytes)) {
-            final Map<String, InputStream> attachments = ImmutableMap.of("attachment.txt", bis);
-            sleepJobId = this.jobClient.submitJobWithAttachments(sleepJob, attachments);
-        }
-        final String killJobId = this.jobClient.submitJob(killJob);
-        final Thread killThread = new Thread(
-            () -> {
-                try {
-                    while (this.jobClient.getJobStatus(killJobId) != JobStatus.RUNNING) {
-                        Thread.sleep(10);
-                    }
-                    this.jobClient.killJob(killJobId);
-                } catch (final Exception e) {
-                    Assertions.fail(e.getMessage(), e);
-                }
-            }
-        );
-        killThread.start();
-        final String timeoutJobId = this.jobClient.submitJob(timeoutJob);
-        final String dateJobId = this.jobClient.submitJob(dateJob);
-        final String echoJobId = this.jobClient.submitJob(echoJob);
+        this.createJobs();
 
         Assertions
             .assertThat(this.jobClient.waitForCompletion(sleepJobId, 60000, 100))
@@ -195,57 +126,98 @@ abstract class JobClientIntegrationTest extends ClusterClientIntegrationTest {
             .assertThat(IOUtils.toString(
                 this.jobClient.getJobOutputFile(echoJobId, null), StandardCharsets.UTF_8))
             .isNotBlank();
-
-        // Some quick find jobs calls
-        Assertions
-            .assertThat(this.jobClient.getJobs())
-            .extracting(JobSearchResult::getId)
-            .containsExactlyInAnyOrder(sleepJobId, killJobId, timeoutJobId, dateJobId, echoJobId);
-        Assertions
-            .assertThat(
-                this.jobClient.getJobs(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    echoCommandId,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-                )
-            )
-            .extracting(JobSearchResult::getId)
-            .containsExactlyInAnyOrder(echoJobId);
-        Assertions
-            .assertThat(
-                this.jobClient.getJobs(
-                    null,
-                    null,
-                    null,
-                    Sets.newHashSet(JobStatus.KILLED.name()),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-                )
-            )
-            .extracting(JobSearchResult::getId)
-            .containsExactlyInAnyOrder(killJobId, timeoutJobId);
     }
 
-    private String createDummyCluster() throws Exception {
+    protected void createJobs() throws Exception {
+        dummyClusterId = this.createDummyCluster();
+        sleepCommandId = this.createSleepCommand();
+        dateCommandId = this.createDateCommand();
+        echoCommandId = this.createEchoCommand();
+
+        final List<ClusterCriteria> clusterCriteriaList = Lists.newArrayList(
+            new ClusterCriteria(Sets.newHashSet(DUMMY_TAG))
+        );
+
+        sleepJob = new JobRequest.Builder(
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            clusterCriteriaList,
+            Sets.newHashSet(SLEEP_TAG)
+        )
+            .withCommandArgs(Lists.newArrayList("1"))
+            .withDisableLogArchival(true)
+            .build();
+
+        killJob = new JobRequest.Builder(
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            clusterCriteriaList,
+            Sets.newHashSet(SLEEP_TAG)
+        )
+            .withCommandArgs(Lists.newArrayList("60"))
+            .withDisableLogArchival(true)
+            .build();
+
+        timeoutJob = new JobRequest.Builder(
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            clusterCriteriaList,
+            Sets.newHashSet(SLEEP_TAG)
+        )
+            .withCommandArgs(Lists.newArrayList("60"))
+            .withTimeout(1)
+            .withDisableLogArchival(true)
+            .build();
+
+        dateJob = new JobRequest.Builder(
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            clusterCriteriaList,
+            Sets.newHashSet(DATE_TAG)
+        )
+            .withDisableLogArchival(true)
+            .build();
+
+        echoJob = new JobRequest.Builder(
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            clusterCriteriaList,
+            Sets.newHashSet(ECHO_TAG)
+        )
+            .withCommandArgs(Lists.newArrayList("hello"))
+            .withDisableLogArchival(true)
+            .build();
+
+        final byte[] attachmentBytes = UUID.randomUUID().toString().getBytes(StandardCharsets.UTF_8);
+        try (ByteArrayInputStream bis = new ByteArrayInputStream(attachmentBytes)) {
+            final Map<String, InputStream> attachments = ImmutableMap.of("attachment.txt", bis);
+            sleepJobId = this.jobClient.submitJobWithAttachments(sleepJob, attachments);
+        }
+        killJobId = this.jobClient.submitJob(killJob);
+        final Thread killThread = new Thread(
+            () -> {
+                try {
+                    while (this.jobClient.getJobStatus(killJobId) != JobStatus.RUNNING) {
+                        Thread.sleep(10);
+                    }
+                    this.jobClient.killJob(killJobId);
+                } catch (final Exception e) {
+                    Assertions.fail(e.getMessage(), e);
+                }
+            }
+        );
+        killThread.start();
+        timeoutJobId = this.jobClient.submitJob(timeoutJob);
+        dateJobId = this.jobClient.submitJob(dateJob);
+        echoJobId = this.jobClient.submitJob(echoJob);
+    }
+
+    protected String createDummyCluster() throws Exception {
         return this.clusterClient.createCluster(
             new Cluster.Builder(
                 UUID.randomUUID().toString(),
@@ -258,7 +230,7 @@ abstract class JobClientIntegrationTest extends ClusterClientIntegrationTest {
         );
     }
 
-    private String createSleepCommand() throws Exception {
+    protected String createSleepCommand() throws Exception {
         return this.commandClient.createCommand(
             new Command.Builder(
                 UUID.randomUUID().toString(),
@@ -279,7 +251,7 @@ abstract class JobClientIntegrationTest extends ClusterClientIntegrationTest {
         );
     }
 
-    private String createDateCommand() throws Exception {
+    protected String createDateCommand() throws Exception {
         return this.commandClient.createCommand(
             new Command.Builder(
                 UUID.randomUUID().toString(),
@@ -300,7 +272,7 @@ abstract class JobClientIntegrationTest extends ClusterClientIntegrationTest {
         );
     }
 
-    private String createEchoCommand() throws Exception {
+    protected String createEchoCommand() throws Exception {
         return this.commandClient.createCommand(
             new Command.Builder(
                 UUID.randomUUID().toString(),
